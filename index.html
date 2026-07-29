@@ -322,6 +322,41 @@
     cursor: pointer;
     font-family: inherit;
     white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .install-icon { width: 15px; height: 15px; flex-shrink: 0; }
+  .ios-install-banner {
+    display: none;
+    width: 100%;
+    background: #fff7e6;
+    color: #7a5b12;
+    border-radius: 14px;
+    padding: 13px 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    margin-bottom: 18px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .ios-install-text { flex: 1; }
+  .ios-share-icon {
+    width: 15px;
+    height: 15px;
+    display: inline-block;
+    vertical-align: middle;
+    margin: 0 2px;
+  }
+  .ios-install-banner button {
+    background: none;
+    border: none;
+    color: #7a5b12;
+    font-size: 15px;
+    cursor: pointer;
+    padding: 0 0 0 6px;
+    align-self: flex-start;
   }
 </style>
 </head>
@@ -329,7 +364,19 @@
 <div class="wrap">
   <div class="install-banner" id="installBanner">
     <span>אפשר להתקין את האפליקציה במחשב שלך</span>
-    <button id="installBtn">התקן במחשב</button>
+    <button id="installBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="install-icon"><rect x="3" y="4" width="18" height="13" rx="1.5"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><path d="M9 9l3-3 3 3M12 6.5V13"/></svg>
+      Add to Home Screen
+    </button>
+  </div>
+
+  <div class="ios-install-banner" id="iosInstallBanner">
+    <div class="ios-install-text">
+      להתקנה על האייפון: הקש על כפתור השיתוף
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ios-share-icon"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 14v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6"/></svg>
+      למטה, ואז בחר <b>"הוסף למסך הבית"</b>
+    </div>
+    <button id="iosInstallDismiss">✕</button>
   </div>
 
   <div class="icon-badge">
@@ -695,6 +742,21 @@
   if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
     installBanner.style.display = 'none';
   }
+
+  // --- iOS install instructions (no programmatic install API exists on iOS) ---
+  const iosInstallBanner = document.getElementById('iosInstallBanner');
+  const iosInstallDismiss = document.getElementById('iosInstallDismiss');
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  const iosDismissed = localStorage.getItem('po-hanity-ios-banner-dismissed');
+
+  if (isIOS && !isStandalone && !iosDismissed) {
+    iosInstallBanner.style.display = 'flex';
+  }
+  iosInstallDismiss.addEventListener('click', () => {
+    iosInstallBanner.style.display = 'none';
+    localStorage.setItem('po-hanity-ios-banner-dismissed', '1');
+  });
 
   // --- Register service worker for offline support ---
   if ('serviceWorker' in navigator) {
