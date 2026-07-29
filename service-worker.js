@@ -1,4 +1,4 @@
-const CACHE_NAME = 'po-hanity-v1';
+const CACHE_NAME = 'po-hanity-v2';
 const ASSETS = [
   './index.html',
   './manifest.json',
@@ -23,17 +23,21 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// Stale-while-revalidate: serve the cached copy instantly, but always fetch a
+// fresh one in the background and store it for next time. This means asset
+// updates (like a new icon) show up after one extra reload instead of never.
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request).then((response) => {
-        if (response && response.status === 200 && event.request.method === 'GET') {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        }
-        return response;
-      }).catch(() => cached);
-    })
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.match(event.request).then((cached) => {
+        const networkFetch = fetch(event.request).then((response) => {
+          if (response && response.status === 200 && event.request.method === 'GET') {
+            cache.put(event.request, response.clone());
+          }
+          return response;
+        }).catch(() => cached);
+        return cached || networkFetch;
+      })
+    )
   );
 });
