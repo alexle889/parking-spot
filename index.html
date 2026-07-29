@@ -14,6 +14,12 @@
 <meta name="apple-mobile-web-app-title" content="פה חניתי">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!--
+  Google AdSense — commented out until you have an approved publisher ID.
+  Once approved, uncomment this and replace ca-pub-XXXXXXXXXXXXXXXX with your
+  real client ID (also update the matching data-ad-client below in the body).
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>
+-->
 <style>
   :root {
     --green: #1BA672;
@@ -168,6 +174,34 @@
     line-height: 1.7;
   }
   .footnote a { color: #5b6473; text-decoration: underline; }
+  .ad-placeholder {
+    width: 100%;
+    max-width: 320px;
+    height: 100px;
+    margin: 24px auto 0;
+    border: 1.5px dashed #c9cfda;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9aa2b1;
+    font-size: 12.5px;
+    text-align: center;
+    padding: 8px;
+  }
+  .share-app-link {
+    display: block;
+    text-align: center;
+    margin-top: 14px;
+    font-size: 13px;
+    color: var(--green-dark);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    text-decoration: underline;
+    width: 100%;
+  }
 
   /* Saved-state view */
   .saved-card {
@@ -295,7 +329,7 @@
 <div class="wrap">
   <div class="install-banner" id="installBanner">
     <span>אפשר להתקין את האפליקציה במחשב שלך</span>
-    <button id="installBtn">התקן</button>
+    <button id="installBtn">התקן במחשב</button>
   </div>
 
   <div class="icon-badge">
@@ -358,6 +392,16 @@
   </div>
 
   <p class="footnote">המיקום נשמר במכשיר שלך<br><a href="mailto:alex889@gmail.com">נוצר ע"י אלכס ליבוביץ</a></p>
+  <button class="share-app-link" id="shareAppBtn">שתף את האפליקציה עם חבר</button>
+
+  <!--
+    Google AdSense slot — replace this <div class="ad-placeholder"> with your
+    real <ins class="adsbygoogle"> tag once you have an approved unit, e.g.:
+    <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+         data-ad-slot="XXXXXXXXXX" data-ad-format="auto" data-full-width-responsive="true"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+  -->
+  <div class="ad-placeholder">מקום לפרסומת (Google AdSense)</div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -601,6 +645,26 @@
     }
   });
 
+  document.getElementById('shareAppBtn').addEventListener('click', async () => {
+    const shareData = {
+      title: 'פה חניתי',
+      text: 'אפליקציה קטנה לזכור איפה חנית',
+      url: window.location.href
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) { /* user cancelled */ }
+    } else {
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        showToast('הקישור לאפליקציה הועתק ללוח');
+      } catch (err) {
+        showToast('לא ניתן לשתף במכשיר זה');
+      }
+    }
+  });
+
   // --- Load existing spot on start ---
   const existing = loadEntry();
   if (existing) renderSaved(existing);
@@ -626,6 +690,11 @@
   window.addEventListener('appinstalled', () => {
     installBanner.style.display = 'none';
   });
+
+  // If already running as an installed app, never show the install banner
+  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+    installBanner.style.display = 'none';
+  }
 
   // --- Register service worker for offline support ---
   if ('serviceWorker' in navigator) {
