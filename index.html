@@ -219,6 +219,20 @@
     max-height: 220px;
     object-fit: cover;
   }
+  .nav-link {
+    display: none;
+    width: 100%;
+    text-align: center;
+    background: var(--green);
+    color: white;
+    border-radius: 12px;
+    padding: 13px;
+    font-size: 14.5px;
+    font-weight: 600;
+    text-decoration: none;
+    margin-bottom: 12px;
+    box-shadow: 0 8px 18px rgba(27,166,114,0.25);
+  }
   .saved-actions { display: flex; gap: 10px; }
   .btn-secondary, .btn-clear {
     flex: 1;
@@ -299,11 +313,11 @@
   <div class="card" id="formCard">
     <div class="field-row">
       <div class="field">
-        <label>שורה / עמוד</label>
+        <label>שורה / עמוד (אופציונלי)</label>
         <input type="text" id="spotInput" placeholder="B12">
       </div>
       <div class="field">
-        <label>קומה</label>
+        <label>קומה (אופציונלי)</label>
         <input type="text" id="levelInput" placeholder="-2">
       </div>
     </div>
@@ -336,13 +350,14 @@
       <span id="savedNote"></span>
     </div>
     <img class="saved-photo" id="savedPhoto" style="display:none">
+    <a class="nav-link" id="navLink" style="display:none" target="_blank" rel="noopener">נווט לרכב 📍</a>
     <div class="saved-actions">
       <button class="btn-secondary" id="editBtn">ערוך</button>
       <button class="btn-clear" id="clearBtn">מצאתי את הרכב</button>
     </div>
   </div>
 
-  <p class="footnote">המיקום נשמר במכשיר שלך<br><a href="#" onclick="return false;">נוצר ע"י אלכס ליבוביץ</a></p>
+  <p class="footnote">המיקום נשמר במכשיר שלך<br><a href="mailto:alex889@gmail.com">נוצר ע"י אלכס ליבוביץ</a></p>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -395,6 +410,25 @@
     localStorage.removeItem(STORAGE_KEY);
   }
 
+  // --- Geolocation capture ---
+  function getLocation() {
+    return new Promise((resolve) => {
+      if (!('geolocation' in navigator)) {
+        resolve(null);
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy
+        }),
+        () => resolve(null), // denied, timed out, or unavailable — save without it
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      );
+    });
+  }
+
   // --- Photo capture with compression ---
   photoBtn.addEventListener('click', () => photoInput.click());
 
@@ -438,28 +472,45 @@
   });
 
   // --- Save ---
-  saveBtn.addEventListener('click', () => {
+  saveBtn.addEventListener('click', async () => {
     const spot = spotInput.value.trim();
     const level = levelInput.value.trim();
-    if (!spot && !level) {
-      showToast('הזן לפחות שורה/עמוד או קומה');
+    const note = noteInput.value.trim();
+
+    saveBtnLabel.textContent = 'מאתר מיקום...';
+    saveIcon.style.display = 'none';
+    saveBtn.disabled = true;
+
+    const location = await getLocation();
+
+    if (!spot && !level && !note && !pendingPhotoDataUrl && !location) {
+      showToast('לא הצלחנו לאתר מיקום — הוסף פרט ידני');
+      saveBtnLabel.textContent = 'חניתי כאן';
+      saveIcon.style.display = 'block';
+      saveBtn.disabled = false;
       return;
     }
+
     const entry = {
       spot: spot || '—',
       level: level || '—',
-      note: noteInput.value.trim(),
+      note: note,
       photo: pendingPhotoDataUrl,
+      location: location,
       timestamp: new Date().toISOString()
     };
 
     try {
       saveEntry(entry);
       renderSaved(entry);
-      showToast('המיקום נשמר');
+      showToast(location ? 'המיקום נשמר (כולל GPS)' : 'המיקום נשמר (ללא GPS)');
     } catch (err) {
       console.error('Storage error:', err);
       showToast('שגיאה בשמירה, ייתכן שהתמונה כבדה מדי');
+    } finally {
+      saveBtnLabel.textContent = 'חניתי כאן';
+      saveIcon.style.display = 'block';
+      saveBtn.disabled = false;
     }
   });
 
@@ -481,6 +532,13 @@
       savedPhoto.style.display = 'block';
     } else {
       savedPhoto.style.display = 'none';
+    }
+    const navLink = document.getElementById('navLink');
+    if (entry.location) {
+      navLink.href = `https://www.google.com/maps/dir/?api=1&destination=${entry.location.lat},${entry.location.lng}`;
+      navLink.style.display = 'block';
+    } else {
+      navLink.style.display = 'none';
     }
     formCard.style.display = 'none';
     savedCard.style.display = 'block';
